@@ -1,0 +1,18 @@
+version: '3.8'
+
+services:
+  backend:
+    build: ./MediConnectBackend
+    container_name: mediconnect_backend
+    volumes:
+      - ./MediConnectBackend:/app
+    ports:
+      - "8000:8000"
+    env_file:
+      - ./MediConnectBackend/.env
+    environment:
+      - DEBUG=True
+    restart: always
+
+# Note: We are using SQLite internally for FYP simplicity.
+# To use Postgres, you would add a 'db' service here.

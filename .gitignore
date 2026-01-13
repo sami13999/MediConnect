@@ -1,0 +1,21 @@
+# System Files
+.DS_Store
+Thumbs.db
+
+# Frontend (Expo/React Native)
+node_modules/
+.expo/
+dist/
+web-build/
+*.apk
+*.aab
+
+# Backend (Django/Python)
+venv/
+env/
+__pycache__/
+*.py[cod]
+db.sqlite3
+media/
+staticfiles/
+.env
