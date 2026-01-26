@@ -147,7 +147,33 @@ class AvailabilityViewSet(viewsets.ModelViewSet):
             
         return queryset.order_by('time_slot')
 
+    def create(self, request, *args, **kwargs):
+        # Optimized Upsert (Update or Create) Logic
+        # This prevents "Unique Constraint" errors when creating bulk slots
+        
+        doctor = request.user
+        if doctor.role != 'doctor':
+             return Response({'error': 'Only doctors can set availability'}, status=403)
+
+        data = request.data
+        day = data.get('day')
+        time_slot = data.get('time_slot')
+        is_available = data.get('is_available')
+
+        if not day or not time_slot:
+            return Response({'error': 'Missing day or time_slot'}, status=400)
+
+        # Update if exists, Create if not
+        obj, created = Availability.objects.update_or_create(
+            doctor=doctor,
+            day=day,
+            time_slot=time_slot,
+            defaults={'is_available': is_available}
+        )
+        
+        serializer = self.get_serializer(obj)
+        return Response(serializer.data)
+
     def perform_create(self, serializer):
-        if self.request.user.role != 'doctor':
-            raise ValidationError("Only doctors can manage availability.")
+        # Fallback if standard create is used (though overridden above)
         serializer.save(doctor=self.request.user)
