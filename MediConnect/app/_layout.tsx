@@ -100,15 +100,19 @@ function RootLayoutNav() {
 }
 
 // Root layout that wraps everything (no changes here, already correct)
+import { AlertProvider } from '../context/AlertContext';
+
 export default function RootLayout() {
   const colorScheme = useColorScheme();
 
   return (
     <AuthProvider>
-      <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-        <RootLayoutNav />
-        <StatusBar style="auto" />
-      </ThemeProvider>
+      <AlertProvider>
+        <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+          <RootLayoutNav />
+          <StatusBar style="auto" />
+        </ThemeProvider>
+      </AlertProvider>
     </AuthProvider>
   );
 }

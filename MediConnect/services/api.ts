@@ -2,10 +2,11 @@ import axios from 'axios';
 import * as SecureStore from 'expo-secure-store';
 
 // Load base URL from environment variable
-const API_URL = process.env.EXPO_PUBLIC_API_URL;
+// Load base URL from environment variable or use fallback
+const API_URL = process.env.EXPO_PUBLIC_API_URL || "http://172.31.207.111:8000/api";
 
-if (!API_URL) {
-  console.error("❌ CRITICAL: EXPO_PUBLIC_API_URL is not defined in .env! Backend connection will fail.");
+if (!process.env.EXPO_PUBLIC_API_URL) {
+  console.warn("⚠️ EXPO_PUBLIC_API_URL not found in .env. Using fallback:", API_URL);
 }
 
 const api = axios.create({
@@ -88,7 +89,7 @@ api.interceptors.response.use(
       // But logging is fine
        console.error('Backend Error:', error.response.data);
     } else if (error.request) {
-      console.error('Network Error - Cannot connect to server.');
+      console.error('Network Error - Server not reachable.');
     } else {
       console.error('Error Message:', error.message);
     }

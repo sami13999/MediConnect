@@ -15,9 +15,11 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
+import { useAlert } from "@/context/AlertContext";
 
 export default function BookAppointment() {
   const router = useRouter();
+  const { showAlert } = useAlert();
   const params = useLocalSearchParams();
 
   // 1. Get Doctor Info from the previous screen
@@ -31,6 +33,22 @@ export default function BookAppointment() {
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   const [availableSlots, setAvailableSlots] = useState<string[]>([]);
   const [fetchingSlots, setFetchingSlots] = useState(true);
+  const [datesList, setDatesList] = useState<Date[]>([]);
+
+  useEffect(() => {
+    generateDates();
+  }, []);
+
+  const generateDates = () => {
+    const list = [];
+    const today = new Date();
+    for (let i = 0; i < 14; i++) {
+       const d = new Date(today);
+       d.setDate(today.getDate() + i);
+       list.push(d);
+    }
+    setDatesList(list);
+  };
 
   // Payment Logic
   const [paymentMethod, setPaymentMethod] = useState<'easypaisa' | 'bank' | null>(null);
@@ -102,9 +120,11 @@ export default function BookAppointment() {
     }
   };
 
+
+
   const handleBook = async () => {
     if (!selectedSlot) {
-      Alert.alert("Required", "Please select a time slot first.");
+      showAlert({ title: "Required", message: "Please select a time slot first.", icon: "time" });
       return;
     }
 
@@ -131,14 +151,18 @@ export default function BookAppointment() {
         headers: { "Content-Type": "multipart/form-data" },
       });
 
-      Alert.alert("Success", "Appointment Booked Successfully!", [
-        { text: "OK", onPress: () => router.push("/(patient)") },
-      ]);
+      showAlert({
+        title: "Success",
+        message: "Appointment Booked Successfully!",
+        icon: "checkmark-circle",
+        buttons: [{ text: "OK", onPress: () => router.push("/(patient)") }]
+      });
+
     } catch (error: any) {
       if (error.response?.data?.code === "token_not_valid") {
-        Alert.alert("Session Expired", "Please Logout and Login again.");
+        showAlert({ title: "Session Expired", message: "Please Logout and Login again.", icon: "log-out-outline" });
       } else {
-        Alert.alert("Error", "Booking Failed. Please try again.");
+        showAlert({ title: "Error", message: "Booking Failed. Please try again.", icon: "alert-circle", iconColor: "red" });
       }
     } finally {
       setLoading(false);
@@ -161,19 +185,34 @@ export default function BookAppointment() {
 
         {/* Date Selector */}
         <Text style={styles.sectionTitle}>Select Date</Text>
-        <View style={styles.dateSelector}>
-           <TouchableOpacity 
-            onPress={() => setSelectedDate(new Date().toISOString().split('T')[0])}
-            style={[styles.dateTab, selectedDate === new Date().toISOString().split('T')[0] && styles.activeTab]}
-           >
-             <Text style={[styles.dateTabText, selectedDate === new Date().toISOString().split('T')[0] && styles.activeTabText]}>Today</Text>
-           </TouchableOpacity>
-           <TouchableOpacity 
-            onPress={() => setSelectedDate(tomorrowStr)}
-            style={[styles.dateTab, selectedDate === tomorrowStr && styles.activeTab]}
-           >
-             <Text style={[styles.dateTabText, selectedDate === tomorrowStr && styles.activeTabText]}>Tomorrow</Text>
-           </TouchableOpacity>
+        <View style={styles.dateSelectorContainer}>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 10, paddingHorizontal: 4 }}>
+              {datesList.map((date, index) => {
+                  const dateStr = date.toISOString().split('T')[0];
+                  const isActive = selectedDate === dateStr;
+                  const dayName = date.toLocaleDateString('en-US', { weekday: 'short' });
+                  const dayNum = date.getDate();
+
+                  return (
+                    <TouchableOpacity 
+                      key={index}
+                      style={[styles.dateCard, isActive && styles.activeDateCard]}
+                      onPress={() => setSelectedDate(dateStr)}
+                      activeOpacity={0.7}
+                    >
+                      <Text style={[styles.dayName, isActive && styles.activeDayName]}>{dayName}</Text>
+                      <View style={[styles.matchesBadge, isActive ? { backgroundColor: 'rgba(255,255,255,0.2)' } : { backgroundColor: '#F1F5F9' }]}>
+                          <Text style={[styles.dayNumber, isActive && styles.activeDayNumber]}>{dayNum}</Text>
+                      </View>
+                      {index === 0 && (
+                        <View style={styles.todayInd}>
+                            <Text style={styles.todayText}>Today</Text>
+                        </View>
+                      )}
+                    </TouchableOpacity>
+                  );
+              })}
+            </ScrollView>
         </View>
 
         {/* Slots Section */}
@@ -383,11 +422,41 @@ const styles = StyleSheet.create({
   totalVal: { fontWeight: "bold", fontSize: 18, color: "#0a7ea4" },
 
   note: { color: "#888", fontSize: 12, marginTop: 15, textAlign: "center" },
-  dateSelector: { flexDirection: 'row', gap: 12, marginBottom: 25 },
-  dateTab: { flex: 1, paddingVertical: 12, borderRadius: 12, backgroundColor: '#FFF', alignItems: 'center', borderWidth: 1, borderColor: '#eee' },
-  activeTab: { backgroundColor: '#0a7ea4', borderColor: '#0a7ea4' },
-  dateTabText: { fontSize: 14, fontWeight: '700', color: '#666' },
-  activeTabText: { color: '#FFF' },
+  
+  // New Date Selector Styles
+  dateSelectorContainer: { marginBottom: 25, height: 90 },
+  dateCard: { 
+     width: 60, 
+     height: 85, 
+     backgroundColor: '#FFF', 
+     borderRadius: 30, 
+     alignItems: 'center', 
+     justifyContent: 'center',
+     paddingVertical: 5,
+     borderWidth: 1, 
+     borderColor: '#E2E8F0',
+     marginRight: 4,
+     elevation: 2,
+  },
+  activeDateCard: { 
+    backgroundColor: '#0a7ea4', 
+    borderColor: '#0a7ea4',
+    transform: [{ scale: 1.05 }],
+  },
+  dayName: { fontSize: 11, fontWeight: '700', color: '#94A3B8', textTransform: 'uppercase', marginBottom: 6 },
+  activeDayName: { color: 'rgba(255,255,255,0.8)' },
+  matchesBadge: { 
+    width: 32, 
+    height: 32, 
+    borderRadius: 16, 
+    justifyContent: 'center', 
+    alignItems: 'center',
+  },
+  dayNumber: { fontSize: 16, fontWeight: '900', color: '#334155' },
+  activeDayNumber: { color: '#FFF' },
+  todayInd: { position: 'absolute', top: -8, backgroundColor: '#EF4444', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 8 },
+  todayText: { color: '#FFF', fontSize: 8, fontWeight: 'bold' },
+
   loadingText: { color: '#888', fontStyle: 'italic', marginBottom: 20 },
   noSlots: { alignItems: 'center', padding: 30, backgroundColor: '#fff', borderRadius: 12, borderWidth: 1, borderColor: '#eee', marginBottom: 20 },
   noSlotsText: { color: '#94A3B8', marginTop: 10, fontWeight: '600' },

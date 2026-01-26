@@ -23,9 +23,14 @@ import * as ImagePicker from "expo-image-picker";
 import { LinearGradient } from "expo-linear-gradient";
 import { GlassCard } from "@/components/ui/GlassCard";
 
+
+import { useAlert } from '@/context/AlertContext';
+
 export default function DoctorProfile() {
   const router = useRouter();
   const { logout } = useAuth();
+  const { showAlert } = useAlert(); // Access Global Alert
+
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [editModalVisible, setEditModalVisible] = useState(false);
@@ -80,7 +85,7 @@ export default function DoctorProfile() {
   const pickImage = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== "granted") {
-      Alert.alert("Permission Denied", "We need access to your gallery.");
+      showAlert({ title: "Permission Denied", message: "We need access to your gallery.", icon: "images" });
       return;
     }
 
@@ -110,11 +115,11 @@ export default function DoctorProfile() {
         headers: { "Content-Type": "multipart/form-data" },
         transformRequest: (data) => data,
       });
-      Alert.alert("Success", "Profile Picture Updated!");
       fetchProfile();
+      showAlert({ title: "Success", message: "Profile Picture Updated!", icon: "checkmark-circle" });
     } catch (error: any) {
       console.error("Upload Error:", error.response?.data || error.message);
-      Alert.alert("Error", "Upload failed. Image might be too large.");
+      showAlert({ title: "Error", message: "Upload failed. Image might be too large.", icon: "alert-circle", iconColor: "red" });
     }
   };
 
@@ -126,21 +131,23 @@ export default function DoctorProfile() {
         experience_years: parseInt(formData.experience_years) || 0,
       };
       await api.patch("/users/profile/", payload);
-      Alert.alert("Success", "Profile Updated!");
       setEditModalVisible(false);
       fetchProfile();
+      showAlert({ title: "Success", message: "Profile Updated!", icon: "checkmark-circle" });
     } catch (error) {
-      Alert.alert("Error", "Update failed.");
+      showAlert({ title: "Error", message: "Update failed.", icon: "alert-circle", iconColor: "red" });
     } finally {
       setLoading(false);
     }
   };
 
   const handleLogout = () => {
-    Alert.alert(
-      "Confirm Logout",
-      "Are you sure you want to log out of the system?",
-      [
+    showAlert({
+      title: "Confirm Logout",
+      message: "Are you sure you want to log out of the system?",
+      icon: "log-out-outline",
+      iconColor: "#EF4444",
+      buttons: [
         {
           text: "Cancel",
           style: "cancel",
@@ -151,7 +158,7 @@ export default function DoctorProfile() {
           onPress: logout,
         },
       ]
-    );
+    });
   };
 
   const MenuItem = ({ icon, title, subtitle, onPress, color = "#1e293b" }: any) => (

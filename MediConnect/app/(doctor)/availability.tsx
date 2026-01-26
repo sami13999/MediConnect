@@ -3,17 +3,16 @@ import { StyledButton } from '@/components/ui/StyledButton';
 import { Colors, Spacing } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { Ionicons } from '@expo/vector-icons';
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { GlassCard } from '@/components/ui/GlassCard';
 import api from '@/services/api';
-import { useAuth } from '@/context/AuthContext';
-import { useEffect } from 'react';
-import type { NativeStackNavigationOptions } from '@react-navigation/native-stack';
-import { router, useNavigation } from 'expo-router';
+import { useNavigation } from 'expo-router';
+import { useAlert } from '@/context/AlertContext';
 
+// 9 AM to 7:30 PM slots
 const SLOTS_CONFIG = [
   "09:00", "09:30", "10:00", "10:30", "11:00", "11:30",
   "14:00", "14:30", "15:00", "15:30", "16:00", "16:30",
@@ -23,21 +22,38 @@ const SLOTS_CONFIG = [
 export default function DoctorAvailability() {
   const colorScheme = useColorScheme();
   const theme = Colors[colorScheme ?? 'light'];
-  const navigation = useNavigation();
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   const [availableSlots, setAvailableSlots] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [datesList, setDatesList] = useState<Date[]>([]);
+  
+  // Custom Alert Context
+  const { showAlert } = useAlert();
+
+  useEffect(() => {
+    generateDates();
+  }, []);
 
   useEffect(() => {
     fetchAvailability();
   }, [selectedDate]);
 
+  const generateDates = () => {
+    const list = [];
+    const today = new Date();
+    for (let i = 0; i < 14; i++) {
+       const d = new Date(today);
+       d.setDate(today.getDate() + i);
+       list.push(d);
+    }
+    setDatesList(list);
+  };
+
   const fetchAvailability = async () => {
     setLoading(true);
     try {
       const res = await api.get(`/appointments/availability/?day=${selectedDate}`);
-      // res.data is expected to be list of {time_slot: "09:00:00", is_available: true}
       const activeSlots = res.data
         .filter((s: any) => s.is_available)
         .map((s: any) => s.time_slot.slice(0, 5));
@@ -55,38 +71,86 @@ export default function DoctorAvailability() {
     );
   };
 
-  const handleSave = async () => {
-    setIsSaving(true);
-    try {
-      // For each slot in SLOTS_CONFIG, check if it's in availableSlots
-      // This is a bit inefficient (multiple calls), but let's assume we can bulk or just handle it
-      // Actually, better to send the whole list to a custom endpoint or just loop
-      await Promise.all(SLOTS_CONFIG.map(async (time) => {
-        const isAvailable = availableSlots.includes(time);
-        // We probably need a more efficient bulk update, but for now:
-        // Attempt to create or update
-        try {
-           await api.post('/appointments/availability/', {
-             day: selectedDate,
-             time_slot: `${time}:00`,
-             is_available: isAvailable
-           });
-        } catch (e) {
-           // If unique constraint fails, we should find the ID and patch
-           // In a real app, use get_or_create logic or bulk_create with update_conflicts
+  const handleSavePress = () => {
+    const dateObj = new Date(selectedDate);
+    const dayName = dateObj.toLocaleDateString('en-US', { weekday: 'long' });
+
+    showAlert({
+      title: "Update Schedule",
+      message: `Do you want to apply this schedule only for ${selectedDate} or repeat it for all upcoming ${dayName}s?`,
+      icon: "calendar",
+      buttons: [
+        {
+          text: "Only This Day",
+          style: 'cancel',
+          onPress: () => saveSlots([selectedDate]),
+        },
+        {
+          text: `All ${dayName}s (4 Weeks)`,
+          style: 'default',
+          onPress: () => calculateAndSaveRecurring(selectedDate)
         }
-      }));
-      Alert.alert('Success', 'Availability updated for ' + selectedDate);
+      ]
+    });
+  };
+
+  const calculateAndSaveRecurring = (baseDateStr: string) => {
+    const datesToUpdate = [baseDateStr];
+    const baseDate = new Date(baseDateStr);
+    
+    // Add next 3 weeks (total 4 occurrences)
+    for (let i = 1; i <= 3; i++) {
+      const nextDate = new Date(baseDate);
+      nextDate.setDate(baseDate.getDate() + (i * 7));
+      datesToUpdate.push(nextDate.toISOString().split('T')[0]);
+    }
+
+    saveSlots(datesToUpdate);
+  };
+
+  const saveSlots = async (targetDates: string[]) => {
+    setIsSaving(true);
+
+    try {
+      // Flatten requests: For each DATE, update all SLOTS
+      const requests = [];
+
+      for (const date of targetDates) {
+         for (const time of SLOTS_CONFIG) {
+            const isAvailable = availableSlots.includes(time);
+            requests.push(
+               api.post('/appointments/availability/', {
+                 day: date,
+                 time_slot: `${time}:00`,
+                 is_available: isAvailable
+               }).catch(e => {}) 
+            );
+         }
+      }
+
+      await Promise.all(requests);
+      
+      showAlert({
+          title: "Schedule Updated",
+          message: targetDates.length > 1 
+            ? `Availability set for the next 4 weeks successfully!` 
+            : 'Availability updated successfully!',
+          icon: "checkmark-circle",
+          buttons: [{ text: "Great!", style: 'default', onPress: () => {} }]
+        });
+
     } catch (error) {
-      Alert.alert('Error', 'Could not update availability');
+       showAlert({
+          title: "Error",
+          message: "Could not update availability. Please try again.",
+          icon: "alert-circle",
+          iconColor: "#EF4444",
+           buttons: [{ text: "OK", style: 'cancel', onPress: () => {} }]
+        });
     } finally {
       setIsSaving(false);
     }
   };
-
-  const tomorrow = new Date();
-  tomorrow.setDate(tomorrow.getDate() + 1);
-  const tomorrowStr = tomorrow.toISOString().split('T')[0];
 
   const formatTimeDisplay = (t: string) => {
     const hour = parseInt(t.split(':')[0]);
@@ -102,7 +166,6 @@ export default function DoctorAvailability() {
         style={StyleSheet.absoluteFill}
       />
       
-      {/* Decorative background elements */}
       <View style={[styles.decorCircle, { top: 150, left: -100, backgroundColor: '#0ea5e9', opacity: 0.05 }]} />
       <View style={[styles.decorCircle, { bottom: 100, right: -120, backgroundColor: '#22d3ee', opacity: 0.08 }]} />
 
@@ -125,20 +188,35 @@ export default function DoctorAvailability() {
       <View style={{ flex: 1 }}> 
         <ScrollView contentContainerStyle={styles.scrollContent}>
 
-          {/* Date Selector */}
-          <View style={styles.dateSelector}>
-             <TouchableOpacity 
-              onPress={() => setSelectedDate(new Date().toISOString().split('T')[0])}
-              style={[styles.dateTab, selectedDate === new Date().toISOString().split('T')[0] && styles.activeTab]}
-             >
-               <Text style={[styles.dateTabText, selectedDate === new Date().toISOString().split('T')[0] && styles.activeTabText]}>Today</Text>
-             </TouchableOpacity>
-             <TouchableOpacity 
-              onPress={() => setSelectedDate(tomorrowStr)}
-              style={[styles.dateTab, selectedDate === tomorrowStr && styles.activeTab]}
-             >
-               <Text style={[styles.dateTabText, selectedDate === tomorrowStr && styles.activeTabText]}>Tomorrow</Text>
-             </TouchableOpacity>
+          {/* New Horizontal Date Selector */}
+          <View style={styles.dateSelectorContainer}>
+             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 10, paddingHorizontal: 4 }}>
+                {datesList.map((date, index) => {
+                   const dateStr = date.toISOString().split('T')[0];
+                   const isActive = selectedDate === dateStr;
+                   const dayName = date.toLocaleDateString('en-US', { weekday: 'short' });
+                   const dayNum = date.getDate();
+
+                   return (
+                     <TouchableOpacity 
+                       key={index}
+                       style={[styles.dateCard, isActive && styles.activeDateCard]}
+                       onPress={() => setSelectedDate(dateStr)}
+                       activeOpacity={0.7}
+                     >
+                        <Text style={[styles.dayName, isActive && styles.activeDayName]}>{dayName}</Text>
+                        <View style={[styles.matchesBadge, isActive ? { backgroundColor: 'rgba(255,255,255,0.2)' } : { backgroundColor: '#F1F5F9' }]}>
+                           <Text style={[styles.dayNumber, isActive && styles.activeDayNumber]}>{dayNum}</Text>
+                        </View>
+                        {index === 0 && (
+                          <View style={styles.todayInd}>
+                             <Text style={styles.todayText}>Today</Text>
+                          </View>
+                        )}
+                     </TouchableOpacity>
+                   );
+                })}
+             </ScrollView>
           </View>
 
           {/* Legend */}
@@ -188,11 +266,11 @@ export default function DoctorAvailability() {
           )}
         </ScrollView>
 
-        {/* Footer Button - Pinned to bottom */}
+        {/* Footer Button */}
         <GlassCard style={styles.footer} intensity={40}>
           <StyledButton 
             title={isSaving ? "Updating Schedule..." : "Save Availability"} 
-            onPress={handleSave}
+            onPress={handleSavePress}
             isLoading={isSaving}
           />
         </GlassCard>
@@ -210,7 +288,7 @@ const styles = StyleSheet.create({
     borderRadius: 150,
   },
   headerGradient: {
-    paddingBottom: 30,
+    paddingBottom: 20, // reduced padding since date selector is larger
     borderBottomLeftRadius: 36,
     borderBottomRightRadius: 36,
     shadowColor: "#0a7ea4",
@@ -220,16 +298,50 @@ const styles = StyleSheet.create({
   },
   safeHeader: { paddingHorizontal: 24, paddingTop: 10 },
   headerTop: { flexDirection: 'row', alignItems: 'center', gap: 15, marginTop: 10 },
-  premiumHeader: { fontSize: 28, fontWeight: "900", color: "#FFF", letterSpacing: -1 },
+  premiumHeader: { fontSize: 26, fontWeight: "900", color: "#FFF", letterSpacing: -1 },
   headerSub: { fontSize: 13, color: "rgba(255,255,255,0.8)", marginTop: 2, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5 },
 
   scrollContent: { padding: 24, paddingBottom: 150 },
   
-  dateSelector: { flexDirection: 'row', gap: 12, marginBottom: 25 },
-  dateTab: { flex: 1, paddingVertical: 14, borderRadius: 16, backgroundColor: '#FFF', alignItems: 'center', borderWidth: 1.5, borderColor: '#E2E8F0' },
-  activeTab: { backgroundColor: '#0a7ea4', borderColor: '#0a7ea4' },
-  dateTabText: { fontSize: 14, fontWeight: '800', color: '#64748B' },
-  activeTabText: { color: '#FFF' },
+  // New Date Selector Styles
+  dateSelectorContainer: { marginBottom: 25, height: 90 }, // Fixed height for horizontal scroll
+  dateCard: { 
+     width: 60, 
+     height: 85, // Taller card
+     backgroundColor: '#FFF', 
+     borderRadius: 30, // Pill shape
+     alignItems: 'center', 
+     justifyContent: 'center',
+     paddingVertical: 5,
+     borderWidth: 1, 
+     borderColor: '#E2E8F0',
+     marginRight: 4,
+     
+     shadowColor: "#000",
+     shadowOpacity: 0.05,
+     shadowRadius: 4,
+     elevation: 2,
+  },
+  activeDateCard: { 
+    backgroundColor: '#0a7ea4', 
+    borderColor: '#0a7ea4',
+    transform: [{ scale: 1.05 }], // Slight pop
+  },
+  dayName: { fontSize: 11, fontWeight: '700', color: '#94A3B8', textTransform: 'uppercase', marginBottom: 6 },
+  activeDayName: { color: 'rgba(255,255,255,0.8)' },
+  
+  matchesBadge: { 
+    width: 32, 
+    height: 32, 
+    borderRadius: 16, 
+    justifyContent: 'center', 
+    alignItems: 'center',
+  },
+  dayNumber: { fontSize: 16, fontWeight: '900', color: '#334155' },
+  activeDayNumber: { color: '#FFF' },
+
+  todayInd: { position: 'absolute', top: -8, backgroundColor: '#EF4444', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 8 },
+  todayText: { color: '#FFF', fontSize: 8, fontWeight: 'bold' },
 
   legendContainer: { 
     flexDirection: 'row', 
@@ -237,18 +349,14 @@ const styles = StyleSheet.create({
     marginBottom: 30, 
     justifyContent: 'center', 
     backgroundColor: '#FFFFFF', 
-    padding: 16,
+    padding: 12,
     borderRadius: 20,
-    borderWidth: 1.5,
+    borderWidth: 1,
     borderColor: '#E2E8F0',
-    shadowColor: "#000",
-    shadowOpacity: 0.04,
-    shadowRadius: 10,
-    elevation: 2,
   },
   legendItem: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  dot: { width: 10, height: 10, borderRadius: 5 },
-  legendText: { fontSize: 12, fontWeight: '800', color: '#64748B', textTransform: 'uppercase', letterSpacing: 0.5 },
+  dot: { width: 8, height: 8, borderRadius: 4 },
+  legendText: { fontSize: 11, fontWeight: '800', color: '#64748B', textTransform: 'uppercase', letterSpacing: 0.5 },
   
   grid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', rowGap: 14 },
   slot: { 

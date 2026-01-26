@@ -13,11 +13,13 @@ import api from '@/services/api';
 import { useAuth } from '@/context/AuthContext';
 import { LinearGradient } from 'expo-linear-gradient';
 import { GlassCard } from '@/components/ui/GlassCard';
+import { useAlert } from '@/context/AlertContext';
 
 export default function ChatScreen() {
   const { id, name } = useLocalSearchParams(); // 'id' is the receiverId
   const router = useRouter();
   const { authState } = useAuth();
+  const { showAlert } = useAlert();
   const colorScheme = useColorScheme();
   const themeColors = Colors[colorScheme ?? 'light'];
   
@@ -87,17 +89,18 @@ export default function ChatScreen() {
     if (chatStatus === 'pending' && authState?.role === 'patient') {
       const patientMessagesCount = chatHistory.filter(msg => msg.sender === authState?.userId).length;
       if (patientMessagesCount >= 1) {
-        Alert.alert(
-          "Security Handshake",
-          "You can only send one message until the doctor accepts your request for a secure consultation channel."
-        );
+        showAlert({
+          title: "Security Handshake",
+          message: "You can only send one message until the doctor accepts your request for a secure consultation channel.",
+          icon: "shield-checkmark"
+        });
         return;
       }
     }
     
     // Non-accepted block for doctors (they must accept first)
     if (chatStatus !== 'accepted' && authState?.role === 'doctor') {
-      Alert.alert("Pending Channel", "You must accept this request before you can start messaging.");
+      showAlert({ title: "Pending Channel", message: "You must accept this request before you can start messaging.", icon: "time" });
       return;
     }
     
@@ -123,7 +126,7 @@ export default function ChatScreen() {
     } catch (error: any) {
       console.log("Send error:", error);
       const detail = error.response?.data?.detail || "Failed to send message.";
-      Alert.alert("Error", detail);
+      showAlert({ title: "Error", message: detail, icon: "alert-circle", iconColor: "red" });
     } finally {
       setIsSending(false);
     }
@@ -133,11 +136,11 @@ export default function ChatScreen() {
   const acceptRequest = async () => {
     try {
       await api.post('/chat/messages/accept_request/', { patient_id: id });
-      Alert.alert("Success", "Chat request accepted!");
+      showAlert({ title: "Success", message: "Chat request accepted!", icon: "checkmark-circle" });
       fetchMessages();
     } catch (error) {
       console.error("Error accepting request:", error);
-      Alert.alert("Error", "Failed to accept request");
+      showAlert({ title: "Error", message: "Failed to accept request", icon: "alert-circle", iconColor: "red" });
     }
   };
 
@@ -148,7 +151,7 @@ export default function ChatScreen() {
   const pickImage = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== 'granted') {
-      Alert.alert("Permission Required", "Allow access to your gallery to share clinical images.");
+      showAlert({ title: "Permission Required", message: "Allow access to your gallery to share clinical images.", icon: "images" });
       return;
     }
     const result = await ImagePicker.launchImageLibraryAsync({
@@ -197,7 +200,7 @@ export default function ChatScreen() {
     if (selectedMessage?.content) {
       await Clipboard.setStringAsync(selectedMessage.content);
       setIsMenuVisible(false);
-      Alert.alert("Copied", "Message copied to clipboard");
+      showAlert({ title: "Copied", message: "Message copied to clipboard", icon: "copy-outline" });
     }
   };
 
@@ -218,9 +221,9 @@ export default function ChatScreen() {
     try {
       await api.post(`/chat/messages/${selectedMessage.id}/pin_message/`);
       fetchMessages();
-      Alert.alert("Success", selectedMessage.is_pinned ? "Message Unpinned" : "Message Pinned");
+      showAlert({ title: "Success", message: selectedMessage.is_pinned ? "Message Unpinned" : "Message Pinned", icon: "pin" });
     } catch (error) {
-      Alert.alert("Error", "Failed to toggle pin");
+      showAlert({ title: "Error", message: "Failed to toggle pin", icon: "alert-circle" });
     }
     setIsMenuVisible(false);
   };
@@ -236,7 +239,12 @@ export default function ChatScreen() {
       (options as any).push({ text: "Delete for Everyone", style: "destructive", onPress: () => callDeleteAPI('everyone') });
     }
 
-    Alert.alert("Delete Message?", "Choose how you want to remove this message.", options as any);
+    showAlert({
+      title: "Delete Message?",
+      message: "Choose how you want to remove this message.",
+      buttons: options as any,
+      icon: "trash-outline"
+    });
   };
 
   const callDeleteAPI = async (type: 'me' | 'everyone') => {
@@ -244,7 +252,7 @@ export default function ChatScreen() {
       await api.post(`/chat/messages/${selectedMessage.id}/delete_message/`, { type });
       fetchMessages();
     } catch (error) {
-      Alert.alert("Error", "Failed to delete message");
+      showAlert({ title: "Error", message: "Failed to delete message", icon: "alert-circle" });
     }
   };
 
@@ -555,10 +563,20 @@ export default function ChatScreen() {
               <TouchableOpacity 
                 style={styles.actionBox}
                 onPress={() => {
-                  Alert.alert("Report User", "Are you sure you want to report this user for inappropriate behavior?", [
-                    { text: "Cancel", style: "cancel" },
-                    { text: "Report", style: "destructive", onPress: () => Alert.alert("Reported", "Our team will review this case.") }
-                  ]);
+                  showAlert({
+                    title: "Report User",
+                    message: "Are you sure you want to report this user for inappropriate behavior?",
+                    icon: "flag",
+                    iconColor: "#EF4444",
+                    buttons: [
+                      { text: "Cancel", style: "cancel" },
+                      { 
+                        text: "Report", 
+                        style: "destructive", 
+                        onPress: () => showAlert({ title: "Reported", message: "Our team will review this case.", icon: "checkmark-circle" }) 
+                      }
+                    ]
+                  });
                 }}
               >
                 <View style={[styles.actionIcon, { backgroundColor: '#FEF2F2' }]}>
@@ -570,10 +588,19 @@ export default function ChatScreen() {
               <TouchableOpacity 
                 style={styles.actionBox}
                 onPress={() => {
-                  Alert.alert("Block User", "You will no longer receive any messages from this user. Proceed?", [
-                    { text: "Cancel", style: "cancel" },
-                    { text: "Block", style: "destructive", onPress: () => Alert.alert("Blocked", "User has been blocked successfully.") }
-                  ]);
+                  showAlert({
+                    title: "Block User",
+                    message: "You will no longer receive any messages from this user. Proceed?",
+                    icon: "ban",
+                    buttons: [
+                      { text: "Cancel", style: "cancel" },
+                      { 
+                        text: "Block", 
+                        style: "destructive", 
+                        onPress: () => showAlert({ title: "Blocked", message: "User has been blocked successfully.", icon: "checkmark-circle" }) 
+                      }
+                    ]
+                  });
                 }}
               >
                 <View style={[styles.actionIcon, { backgroundColor: '#F8FAFC' }]}>
