@@ -3,7 +3,7 @@ import * as SecureStore from 'expo-secure-store';
 
 // Load base URL from environment variable
 // Load base URL from environment variable or use fallback
-const API_URL = process.env.EXPO_PUBLIC_API_URL || "http://172.31.207.111:8000/api";
+const API_URL = process.env.EXPO_PUBLIC_API_URL || "http://192.168.10.6:8000/api";
 
 if (!process.env.EXPO_PUBLIC_API_URL) {
   console.warn("⚠️ EXPO_PUBLIC_API_URL not found in .env. Using fallback:", API_URL);

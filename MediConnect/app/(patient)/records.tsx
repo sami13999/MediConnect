@@ -5,7 +5,6 @@ import {
   Text, 
   View, 
   TouchableOpacity, 
-  Alert, 
   RefreshControl,
   ActivityIndicator
 } from 'react-native';
@@ -14,6 +13,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
+import { useAlert } from '@/context/AlertContext';
 import api from '@/services/api';
 import { GlassCard } from '@/components/ui/GlassCard';
 import Constants, { ExecutionEnvironment } from 'expo-constants';
@@ -21,6 +21,7 @@ import Constants, { ExecutionEnvironment } from 'expo-constants';
 const isExpoGo = Constants.executionEnvironment === ExecutionEnvironment.StoreClient;
 
 export default function PatientRecords() {
+  const { showAlert } = useAlert();
   const [records, setRecords] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -44,7 +45,7 @@ export default function PatientRecords() {
     const Notifications = await import('expo-notifications');
     const { status } = await Notifications.requestPermissionsAsync();
     if (status !== 'granted') {
-      Alert.alert('Permission Required', 'Please enable notifications for medicine reminders.');
+      showAlert({ title: 'Permission Required', message: 'Please enable notifications for medicine reminders.', icon: 'notifications-outline' });
     }
   };
 
@@ -113,13 +114,13 @@ export default function PatientRecords() {
       const { uri } = await Print.printToFileAsync({ html });
       await Sharing.shareAsync(uri, { UTI: '.pdf', mimeType: 'application/pdf' });
     } catch (error) {
-      Alert.alert("Error", "Could not generate PDF");
+      showAlert({ title: "Error", message: "Could not generate PDF", icon: "alert-circle-outline", iconColor: "#EF4444" });
     }
   };
 
   const scheduleReminder = async (medicine: string) => {
     if (isExpoGo) {
-      Alert.alert("Expo Go Limitation", "Medicine reminders require a physical device.");
+      showAlert({ title: "Expo Go Limitation", message: "Medicine reminders require a physical device.", icon: "phone-portrait-outline" });
       return;
     }
     try {
@@ -134,9 +135,9 @@ export default function PatientRecords() {
           seconds: 60,
         } as any, 
       });
-      Alert.alert("Reminder Set", "We'll remind you in 1 minute.");
+      showAlert({ title: "Reminder Set", message: "We'll remind you in 1 minute.", icon: "alarm-outline" });
     } catch (error) {
-      Alert.alert("Error", "Failed to set reminder");
+      showAlert({ title: "Error", message: "Failed to set reminder", icon: "alert-circle-outline", iconColor: "#EF4444" });
     }
   };
 
@@ -159,7 +160,7 @@ export default function PatientRecords() {
               <Text style={styles.premiumHeader}>Medical Records</Text>
               <Text style={styles.headerSub}>History of diagnoses & prescriptions</Text>
             </View>
-            <TouchableOpacity style={styles.supportBtn} onPress={() => Alert.alert("Support", "Need help with your records? Contact support.")}>
+            <TouchableOpacity style={styles.supportBtn} onPress={() => showAlert({ title: "Support", message: "Need help with your records? Contact support.", icon: "help-circle-outline" })}>
               <Ionicons name="help-circle-outline" size={24} color="#FFF" />
             </TouchableOpacity>
           </View>

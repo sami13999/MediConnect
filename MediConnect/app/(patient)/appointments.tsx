@@ -7,15 +7,16 @@ import {
   ActivityIndicator, 
   RefreshControl,
   TouchableOpacity,
-  Alert
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useAlert } from '@/context/AlertContext';
 import api from '@/services/api';
 import { GlassCard } from '@/components/ui/GlassCard';
 
 export default function PatientAppointments() {
+  const { showAlert } = useAlert();
   const [appointments, setAppointments] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -60,7 +61,7 @@ export default function PatientAppointments() {
               <Text style={styles.premiumHeader}>My Appointments</Text>
               <Text style={styles.headerSub}>Manage your scheduled consultations</Text>
             </View>
-            <TouchableOpacity style={styles.supportBtn} onPress={() => Alert.alert("Booking Info", "Need to reschedule? Contact your doctor directly via chat.")}>
+            <TouchableOpacity style={styles.supportBtn} onPress={() => showAlert({ title: "Booking Info", message: "Need to reschedule? Contact your doctor directly via chat.", icon: "information-circle-outline" })}>
               <Ionicons name="information-circle-outline" size={24} color="#FFF" />
             </TouchableOpacity>
           </View>

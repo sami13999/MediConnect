@@ -11,8 +11,19 @@ const firebaseConfig = {
   appId: "YOUR_APP_ID"
 };
 
-// FIX: Check if app is already initialized
-const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
+// Check if placeholders are still present
+const isConfigured = firebaseConfig.apiKey !== "YOUR_API_KEY";
 
-export const db = getFirestore(app);
-export const storage = getStorage(app);
+let db: any = null;
+let storage: any = null;
+
+if (isConfigured) {
+  // FIX: Check if app is already initialized
+  const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
+  db = getFirestore(app);
+  storage = getStorage(app);
+} else {
+  console.warn("⚠️ Firebase is not configured. Placeholders detected in firebaseConfig.ts.");
+}
+
+export { db, storage };

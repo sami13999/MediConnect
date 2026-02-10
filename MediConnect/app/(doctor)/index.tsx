@@ -251,22 +251,22 @@ export default function DoctorDashboard() {
                 ) : (
                     appointments.map((item: any) => (
                         <View key={item.id} style={styles.apptCard}>
-                            {/* Left Status Bar */}
                             <View style={[styles.cardAccent, { backgroundColor: item.status === 'confirmed' ? '#10B981' : '#F59E0B' }]} />
                             
                             <View style={styles.cardMain}>
-                                {/* Top Row: Name & Time/Date */}
                                 <View style={styles.cardHeader}>
-                                    <Text style={styles.cardPatientName}>{item.patient_name || "Patient"}</Text>
-                                    <Text style={styles.cardTimeDateText}>
-                                        {item.time ? item.time.slice(0, 5) : "--:--"} • {item.date ? item.date.slice(5).replace('-', '/') : ""}
-                                    </Text>
+                                    <View style={styles.patientInfoCol}>
+                                        <Text style={styles.cardPatientName}>{item.patient_name || "Patient"}</Text>
+                                        <Text style={styles.cardReasonText}>{item.reason || "Consultation Booking"}</Text>
+                                    </View>
+                                    <View style={styles.timeInfoCol}>
+                                        <Text style={styles.cardTimeText}>{item.time ? item.time.slice(0, 5) : "--:--"}</Text>
+                                        <Text style={styles.cardDateText}>{item.date ? item.date.slice(5).replace('-', '/') : ""}</Text>
+                                    </View>
                                 </View>
 
-                                {/* Reason Row */}
-                                <Text style={styles.cardReasonText}>{item.reason || "Consultation Booking"}</Text>
+                                <View style={styles.cardDivider} />
 
-                                {/* Footer Row: Status & Actions */}
                                 <View style={styles.cardFooter}>
                                     <View style={[styles.statusBadge, { backgroundColor: item.status === 'confirmed' ? '#DCFCE7' : '#FEF3C7' }]}>
                                         <Text style={[styles.statusBadgeText, { color: item.status === 'confirmed' ? '#166534' : '#92400E' }]}>
@@ -290,24 +290,24 @@ export default function DoctorDashboard() {
                                                 >
                                                     <Ionicons name="close" size={18} color="#FFF" />
                                                 </TouchableOpacity>
-                                            </>
-                                        )}
 
-                                        {item.status === 'pending' && item.payment_receipt && (
-                                            <TouchableOpacity 
-                                                style={[styles.miniActionBtn, { backgroundColor: '#8B5CF6', width: 'auto', paddingHorizontal: 12 }]}
-                                                onPress={() => openVerificationModal(item)}
-                                            >
-                                                <Ionicons name="receipt-outline" size={18} color="#FFF" />
-                                                <Text style={{ color: '#FFF', fontSize: 11, fontWeight: 'bold', marginLeft: 4 }}>Verify Pay</Text>
-                                            </TouchableOpacity>
+                                                {item.payment_receipt && (
+                                                    <TouchableOpacity 
+                                                        style={[styles.verifyPayBtn]}
+                                                        onPress={() => openVerificationModal(item)}
+                                                    >
+                                                        <Ionicons name="receipt-outline" size={14} color="#FFF" />
+                                                        <Text style={styles.verifyPayBtnText}>Verify</Text>
+                                                    </TouchableOpacity>
+                                                )}
+                                            </>
                                         )}
 
                                         <TouchableOpacity 
                                             style={styles.prescribeBtn}
                                             onPress={() => openPrescribeModal(item)}
                                         >
-                                            <Ionicons name="create-outline" size={18} color="#FFF" />
+                                            <Ionicons name="create-outline" size={16} color="#FFF" />
                                             <Text style={styles.prescribeBtnText}>Prescribe</Text>
                                         </TouchableOpacity>
                                     </View>
@@ -503,36 +503,60 @@ const styles = StyleSheet.create({
   
   apptCard: {
     backgroundColor: '#FFF',
-    borderRadius: 20,
+    borderRadius: 24,
     marginBottom: 16,
     flexDirection: 'row',
     overflow: 'hidden',
     shadowColor: "#000",
-    shadowOpacity: 0.05,
-    shadowRadius: 10,
+    shadowOpacity: 0.04,
+    shadowRadius: 12,
     elevation: 3,
     borderWidth: 1,
     borderColor: '#F1F5F9',
   },
-  cardAccent: { width: 8 },
-  cardMain: { flex: 1, padding: 18 },
-  cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 },
-  cardPatientName: { fontSize: 18, fontWeight: '800', color: '#1E293B' },
-  cardTimeDateText: { fontSize: 13, fontWeight: '700', color: '#0a7ea4' },
-  cardReasonText: { fontSize: 14, color: '#64748B', fontWeight: '500', marginBottom: 16 },
+  cardAccent: { width: 6 },
+  cardMain: { flex: 1, padding: 20 },
+  cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 15 },
+  patientInfoCol: { flex: 1 },
+  cardPatientName: { fontSize: 17, fontWeight: '800', color: '#0F172A', marginBottom: 4 },
+  cardReasonText: { fontSize: 13, color: '#64748B', fontWeight: '500' },
+  timeInfoCol: { alignItems: 'flex-end' },
+  cardTimeText: { fontSize: 15, fontWeight: '800', color: '#0a7ea4' },
+  cardDateText: { fontSize: 11, fontWeight: '700', color: '#94A3B8', marginTop: 2 },
+  
+  cardDivider: { height: 1, backgroundColor: '#F1F5F9', marginBottom: 15 },
+  
   cardFooter: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   
-  statusBadge: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 10 },
-  statusBadgeText: { fontSize: 11, fontWeight: '800' },
+  statusBadge: { paddingHorizontal: 10, paddingVertical: 5, borderRadius: 8 },
+  statusBadgeText: { fontSize: 10, fontWeight: '800', letterSpacing: 0.3 },
   
-  actionRow: { flexDirection: 'row', gap: 8 },
-  miniActionBtn: { width: 36, height: 36, borderRadius: 18, justifyContent: 'center', alignItems: 'center' },
-  prescribeBtn: { 
-    flexDirection: 'row', alignItems: 'center', 
-    backgroundColor: '#0a7ea4', 
-    paddingHorizontal: 14, borderRadius: 12, gap: 6 
+  actionRow: { flexDirection: 'row', gap: 8, alignItems: 'center' },
+  miniActionBtn: { width: 34, height: 34, borderRadius: 10, justifyContent: 'center', alignItems: 'center' },
+  verifyPayBtn: { 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    backgroundColor: '#8B5CF6', 
+    paddingHorizontal: 10, 
+    height: 34,
+    borderRadius: 10, 
+    gap: 4 
   },
-  prescribeBtnText: { color: '#FFF', fontWeight: '800', fontSize: 13 },
+  verifyPayBtnText: { color: '#FFF', fontWeight: '800', fontSize: 11 },
+  prescribeBtn: { 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    backgroundColor: '#0a7ea4', 
+    paddingHorizontal: 12, 
+    height: 34,
+    borderRadius: 10, 
+    gap: 6,
+    shadowColor: "#0a7ea4",
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 2
+  },
+  prescribeBtnText: { color: '#FFF', fontWeight: '800', fontSize: 12 },
 
   emptyContainer: { alignItems: 'center', marginTop: 40, opacity: 0.5 },
   emptyTxt: { fontSize: 14, fontWeight: '600', color: '#64748B', marginTop: 10 },

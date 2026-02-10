@@ -3,6 +3,7 @@ import api from "@/services/api";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "expo-router";
+import { useAlert } from "@/context/AlertContext";
 import React, { useEffect, useState } from "react";
 import {
   FlatList,
@@ -13,7 +14,6 @@ import {
   ScrollView,
   TouchableOpacity,
   Image,
-  Alert,
   Dimensions,
   TextInput,
   Modal,
@@ -35,6 +35,7 @@ const CATEGORIES = [
 export default function PatientDashboard() {
   const { authState } = useAuth();
   const router = useRouter();
+  const { showAlert } = useAlert();
 
   const [doctors, setDoctors] = useState([]);
   const [filteredDoctors, setFilteredDoctors] = useState([]);
@@ -78,9 +79,9 @@ export default function PatientDashboard() {
       const res = await api.get(`/appointments/doctors/recommend/?symptoms=${symptoms}`);
       setFilteredDoctors(res.data);
       setSymptomModalVisible(false);
-      Alert.alert("Success", `Found ${res.data.length} specialists matching your symptoms!`);
+      showAlert({ title: "Success", message: `Found ${res.data.length} specialists matching your symptoms!`, icon: "checkmark-circle-outline" });
     } catch (error: any) {
-      Alert.alert("No Match", error.response?.data?.detail || "Could not find a specific match.");
+      showAlert({ title: "No Match", message: error.response?.data?.detail || "Could not find a specific match.", icon: "alert-circle-outline", iconColor: "#EF4444" });
     }
   };
 

@@ -9,13 +9,12 @@ import {
   ActivityIndicator,
   FlatList,
   TouchableOpacity,
-  Alert,
-  KeyboardAvoidingView,
-  Platform,
   Image,
   Modal,
   ActionSheetIOS,
   Keyboard,
+  Platform,
+  KeyboardAvoidingView,
 } from "react-native";
 import * as ImagePicker from 'expo-image-picker';
 import * as Print from 'expo-print';
@@ -26,10 +25,12 @@ import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "@/context/AuthContext";
 import { LinearGradient } from "expo-linear-gradient";
 import { GlassCard } from "@/components/ui/GlassCard";
+import { useAlert } from "@/context/AlertContext";
 
 export default function DoctorChatRoom() {
   const router = useRouter();
   const { authState } = useAuth();
+  const { showAlert } = useAlert();
   const params = useLocalSearchParams();
 
   const receiverId = params.receiverId;
@@ -112,7 +113,7 @@ export default function DoctorChatRoom() {
 
   const handleDownloadReport = async () => {
     try {
-      Alert.alert("Generating...", "Creating a professional medical report PDF.");
+      showAlert({ title: "Generating...", message: "Creating a professional medical report PDF.", icon: "document-text-outline" });
       const html = `
         <html>
           <head>
@@ -152,7 +153,7 @@ export default function DoctorChatRoom() {
       const { uri } = await Print.printToFileAsync({ html });
       await Sharing.shareAsync(uri, { UTI: '.pdf', mimeType: 'application/pdf' });
     } catch (error) {
-      Alert.alert("Error", "Failed to generate report.");
+      showAlert({ title: "Error", message: "Failed to generate report.", icon: "alert-circle-outline", iconColor: "#EF4444" });
     }
   };
 
@@ -189,9 +190,9 @@ export default function DoctorChatRoom() {
         patient_id: receiverId,
       });
       setIsAccepted(true);
-      Alert.alert("Success", "Request Accepted.");
+      showAlert({ title: "Success", message: "Request Accepted.", icon: "checkmark-circle-outline" });
     } catch (e) {
-      Alert.alert("Error", "Could not accept");
+      showAlert({ title: "Error", message: "Could not accept request.", icon: "alert-circle-outline", iconColor: "#EF4444" });
     }
   };
 
@@ -208,17 +209,22 @@ export default function DoctorChatRoom() {
         }
       );
     } else {
-      Alert.alert("Share Image", "Select source:", [
-        { text: "Camera", onPress: takePhoto },
-        { text: "Gallery", onPress: pickGalleryImage },
-        { text: "Cancel", style: "cancel" }
-      ]);
+      showAlert({
+        title: "Share Image",
+        message: "Select source:",
+        buttons: [
+          { text: "Camera", onPress: takePhoto },
+          { text: "Gallery", onPress: pickGalleryImage },
+          { text: "Cancel", style: "cancel" }
+        ],
+        icon: "images-outline"
+      });
     }
   };
 
   const takePhoto = async () => {
     const { status } = await ImagePicker.requestCameraPermissionsAsync();
-    if (status !== 'granted') return Alert.alert("Error", "Camera access denied");
+    if (status !== 'granted') return showAlert({ title: "Error", message: "Camera access denied", icon: "camera-outline", iconColor: "#EF4444" });
     
     const result = await ImagePicker.launchCameraAsync({
       quality: 0.7,
@@ -231,7 +237,7 @@ export default function DoctorChatRoom() {
 
   const pickGalleryImage = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (status !== 'granted') return Alert.alert("Error", "Gallery access denied");
+    if (status !== 'granted') return showAlert({ title: "Error", message: "Gallery access denied", icon: "images-outline", iconColor: "#EF4444" });
 
     const result = await ImagePicker.launchImageLibraryAsync({
       quality: 0.7,
@@ -255,7 +261,7 @@ export default function DoctorChatRoom() {
     if (!contentToSend.trim() && !imageUri) return;
     
     if (!isAccepted) {
-      Alert.alert("Pending Channel", "Please accept this consultation request before sending a message.");
+      showAlert({ title: "Pending Channel", message: "Please accept this consultation request before sending a message.", icon: "time-outline" });
       return;
     }
 
@@ -280,7 +286,7 @@ export default function DoctorChatRoom() {
       fetchMessages();
     } catch (error) {
       console.log("Send error:", error);
-      Alert.alert("Error", "Failed to send message.");
+      showAlert({ title: "Error", message: "Failed to send message.", icon: "alert-circle-outline", iconColor: "#EF4444" });
     } finally {
       setIsSending(false);
     }
@@ -294,7 +300,7 @@ export default function DoctorChatRoom() {
       setIsActionsVisible(false);
       fetchMessages();
     } catch (error) {
-      Alert.alert("Error", "Failed to delete message.");
+      showAlert({ title: "Error", message: "Failed to delete message.", icon: "alert-circle-outline", iconColor: "#EF4444" });
     }
   };
 
@@ -307,13 +313,13 @@ export default function DoctorChatRoom() {
       setSelectedMessage(null);
       fetchMessages();
     } catch (error) {
-      Alert.alert("Error", "Failed to edit message.");
+      showAlert({ title: "Error", message: "Failed to edit message.", icon: "alert-circle-outline", iconColor: "#EF4444" });
     }
   };
 
   const handleCopyMessage = async (content: string) => {
     await Clipboard.setStringAsync(content);
-    Alert.alert("Copied", "Message copied to clipboard.");
+    showAlert({ title: "Copied", message: "Message copied to clipboard.", icon: "copy-outline" });
     setIsActionsVisible(false);
   };
 
@@ -322,7 +328,7 @@ export default function DoctorChatRoom() {
       await api.post(`/chat/messages/${message.id}/pin_message/`);
       fetchMessages();
     } catch (error) {
-      Alert.alert("Error", "Failed to pin message.");
+      showAlert({ title: "Error", message: "Failed to pin message.", icon: "alert-circle-outline", iconColor: "#EF4444" });
     }
   };
 
@@ -361,15 +367,20 @@ export default function DoctorChatRoom() {
         }
       );
     } else {
-      Alert.alert("Options", "Choose an action:", [
-        { text: "Clinical History", onPress: () => setIsHistoryVisible(true) },
-        { text: "Refer Patient", onPress: () => router.push({
-            pathname: "/(doctor)/referrals",
-            params: { preSelectedPatientId: receiverId as string }
-          }) 
-        },
-        { text: "Cancel", style: "cancel" }
-      ]);
+      showAlert({
+        title: "Options",
+        message: "Choose an action:",
+        buttons: [
+          { text: "Clinical History", onPress: () => setIsHistoryVisible(true) },
+          { text: "Refer Patient", onPress: () => router.push({
+              pathname: "/(doctor)/referrals",
+              params: { preSelectedPatientId: receiverId as string }
+            }) 
+          },
+          { text: "Cancel", style: "cancel" }
+        ],
+        icon: "options-outline"
+      });
     }
   };
 
@@ -439,7 +450,7 @@ export default function DoctorChatRoom() {
               </TouchableOpacity>
 
               <View style={styles.headerActions}>
-                <TouchableOpacity style={styles.callBtnHeader} activeOpacity={0.7} onPress={() => Alert.alert("Coming Soon", "Video consultation feature is being activated.")}>
+                <TouchableOpacity style={styles.callBtnHeader} activeOpacity={0.7} onPress={() => showAlert({ title: "Coming Soon", message: "Video consultation feature is being activated.", icon: "videocam-outline" })}>
                   <Ionicons name="videocam" size={22} color="#FFF" />
                 </TouchableOpacity>
                 <TouchableOpacity style={styles.callBtnHeader} activeOpacity={0.7} onPress={showOptions}>
@@ -722,6 +733,59 @@ export default function DoctorChatRoom() {
                 </View>
                 <Text style={styles.actionText}>Refer</Text>
               </TouchableOpacity>
+            </View>
+
+            <View style={styles.actionGrid}>
+              <TouchableOpacity 
+                style={styles.actionBox}
+                onPress={() => {
+                  showAlert({
+                    title: "Report Patient",
+                    message: "Are you sure you want to report this patient for inappropriate behavior?",
+                    icon: "flag",
+                    iconColor: "#EF4444",
+                    buttons: [
+                      { text: "Cancel", style: "cancel" },
+                      { 
+                        text: "Report", 
+                        style: "destructive", 
+                        onPress: () => showAlert({ title: "Reported", message: "Our team will review this case.", icon: "checkmark-circle" }) 
+                      }
+                    ]
+                  });
+                }}
+              >
+                <View style={[styles.actionIcon, { backgroundColor: '#FEF2F2' }]}>
+                  <Ionicons name="flag" size={20} color="#EF4444" />
+                </View>
+                <Text style={[styles.actionText, { color: '#EF4444' }]}>Report</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity 
+                style={styles.actionBox}
+                onPress={() => {
+                  showAlert({
+                    title: "Block Patient",
+                    message: "You will no longer receive any messages from this patient. Proceed?",
+                    icon: "ban",
+                    buttons: [
+                      { text: "Cancel", style: "cancel" },
+                      { 
+                        text: "Block", 
+                        style: "destructive", 
+                        onPress: () => showAlert({ title: "Blocked", message: "Patient has been blocked successfully.", icon: "checkmark-circle" }) 
+                      }
+                    ]
+                  });
+                }}
+              >
+                <View style={[styles.actionIcon, { backgroundColor: '#F8FAFC' }]}>
+                  <Ionicons name="ban" size={20} color="#64748B" />
+                </View>
+                <Text style={styles.actionText}>Block</Text>
+              </TouchableOpacity>
+              
+              <View style={[styles.actionBox, { opacity: 0, borderWidth: 0 }]} />
             </View>
 
             <TouchableOpacity 

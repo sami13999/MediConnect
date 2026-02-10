@@ -4,12 +4,12 @@ import api from "@/services/api";
 import { useAuth } from "@/context/AuthContext";
 import { HelpModal } from "@/components/HelpModal";
 import { useRouter } from "expo-router";
+import { useAlert } from "@/context/AlertContext";
 import React, { useEffect, useState } from "react";
 import {
   StyleSheet,
   Text,
   View,
-  Alert,
   ScrollView,
   Image,
   TouchableOpacity,
@@ -25,6 +25,7 @@ import { LinearGradient } from "expo-linear-gradient";
 export default function PatientProfile() {
   const router = useRouter();
   const { logout } = useAuth();
+  const { showAlert } = useAlert();
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [editModalVisible, setEditModalVisible] = useState(false);
@@ -92,7 +93,7 @@ export default function PatientProfile() {
   const pickImage = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== "granted") {
-      Alert.alert("Permission Denied", "We need access to your gallery.");
+      showAlert({ title: "Permission Denied", message: "We need access to your gallery.", icon: "images-outline" });
       return;
     }
 
@@ -125,11 +126,11 @@ export default function PatientProfile() {
         },
         transformRequest: (data) => data, // Keep FormData as is
       });
-      Alert.alert("Success", "Profile Picture Updated!");
+      showAlert({ title: "Success", message: "Profile Picture Updated!", icon: "checkmark-circle-outline" });
       fetchProfile();
     } catch (error: any) {
       console.error("Upload Error:", error.response?.data || error.message);
-      Alert.alert("Error", "Upload failed. Check if server allows Large Files.");
+      showAlert({ title: "Error", message: "Upload failed. Check if server allows Large Files.", icon: "alert-circle-outline", iconColor: "#EF4444" });
     }
   };
 
@@ -137,21 +138,23 @@ export default function PatientProfile() {
     setLoading(true);
     try {
       await api.patch("/users/profile/", formData);
-      Alert.alert("Success", "Profile Updated!");
+      showAlert({ title: "Success", message: "Profile Updated!", icon: "checkmark-circle-outline" });
       setEditModalVisible(false);
       fetchProfile();
     } catch (error) {
-      Alert.alert("Error", "Could not update profile.");
+      showAlert({ title: "Error", message: "Could not update profile.", icon: "alert-circle-outline", iconColor: "#EF4444" });
     } finally {
       setLoading(false);
     }
   };
 
   const handleLogout = () => {
-    Alert.alert(
-      "Confirm Logout",
-      "Are you sure you want to log out of the system?",
-      [
+    showAlert({
+      title: "Confirm Logout",
+      message: "Are you sure you want to log out of the system?",
+      icon: "log-out-outline",
+      iconColor: "#EF4444",
+      buttons: [
         {
           text: "Cancel",
           style: "cancel",
@@ -161,8 +164,8 @@ export default function PatientProfile() {
           style: "destructive",
           onPress: logout,
         },
-      ]
-    );
+      ],
+    });
   };
 
   const avatarUrl = profile.profile_picture

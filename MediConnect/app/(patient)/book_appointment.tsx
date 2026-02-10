@@ -6,7 +6,6 @@ import {
   StyleSheet,
   Text,
   View,
-  Alert,
   ScrollView,
   TouchableOpacity,
   Image,
@@ -73,6 +72,13 @@ export default function BookAppointment() {
       if (res.data.consultation_fee) {
         setDoctorFee(parseFloat(res.data.consultation_fee));
       }
+      setDoctorPaymentInfo({
+        easypaisa_number: res.data.easypaisa_number,
+        easypaisa_title: res.data.easypaisa_title,
+        bank_name: res.data.bank_name,
+        bank_account_number: res.data.bank_account_number,
+        bank_account_title: res.data.bank_account_title,
+      });
     } catch (error) {
       console.log("Could not fetch fresh doctor details", error);
     }
