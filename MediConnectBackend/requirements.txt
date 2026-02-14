@@ -67,3 +67,5 @@ tzdata==2025.2
 uritemplate==4.2.0
 urllib3==2.5.0
 whitenoise==6.11.0
+cloudinary==1.42.2
+django-cloudinary-storage==0.3.0
