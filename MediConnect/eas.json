@@ -10,6 +10,9 @@
     "preview": {
       "android": {
         "buildType": "apk"
+      },
+      "env": {
+        "EXPO_PUBLIC_API_URL": "http://18.212.90.140/api"
       }
     },
     "production": {

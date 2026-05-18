@@ -22,11 +22,19 @@ class LoginView(APIView):
     permission_classes = [permissions.AllowAny]
     
     def post(self, request):
-        username = request.data.get('username', '').strip()
-        password = request.data.get('password', '').strip()
-        push_token = request.data.get('push_token') # ✅ New: Capture push token
+        username = request.data.get('username', '').strip().lower() # ✅ Match registration format (lowercased)
+        password = request.data.get('password', '') # ✅ Don't strip passwords! Spaces are allowed.
+        push_token = request.data.get('push_token') # ✅ Capture push token
 
         user = authenticate(username=username, password=password)
+        
+        # ✅ New: Allow login with Email as well as Username!
+        if user is None and '@' in username:
+            try:
+                user_obj = User.objects.get(email=username)
+                user = authenticate(username=user_obj.username, password=password)
+            except User.DoesNotExist:
+                pass
         
         if user:
             # ✅ Save push token if provided

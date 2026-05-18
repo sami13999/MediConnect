@@ -50,7 +50,14 @@
         }
       ],
       "expo-web-browser",
-      "expo-build-properties",
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "usesCleartextTraffic": true
+          }
+        }
+      ],
       "expo-secure-store"
     ],
     "experiments": {
@@ -60,7 +67,7 @@
     "extra": {
       "router": {},
       "eas": {
-        "projectId": "3990497a-9e9d-4a0a-b4ac-519d710c8feb"
+        "projectId": "2e9ce220-e6cf-4680-ba6a-c70c5ef68188"
       }
     }
   }

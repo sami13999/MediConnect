@@ -3,7 +3,7 @@ import * as SecureStore from 'expo-secure-store';
 
 // Load base URL from environment variable
 // Load base URL from environment variable or use fallback
-const API_URL = process.env.EXPO_PUBLIC_API_URL || "http://192.168.10.6:8000/api";
+const API_URL = "http://18.212.90.140:8000/api"; // Updated to AWS EC2 Public IP
 
 if (!process.env.EXPO_PUBLIC_API_URL) {
   console.warn("⚠️ EXPO_PUBLIC_API_URL not found in .env. Using fallback:", API_URL);
@@ -44,7 +44,7 @@ api.interceptors.response.use(
     const originalRequest = error.config;
 
     // Handle 401 Unauthorized (Token Expired)
-    if (error.response?.status === 401 && !originalRequest._retry) {
+    if (error.response?.status === 401 && !originalRequest._retry && !originalRequest.url.includes("/login/")) {
       if (isRedirecting) return Promise.reject(error);
 
       originalRequest._retry = true;
